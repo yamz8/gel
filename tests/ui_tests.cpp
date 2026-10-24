@@ -297,6 +297,30 @@ private slots:
         w.shot("danish");
     }
 
+    // The README's screenshot: a ladder, labeled samples, a loading
+    // reference, and an annotation, with the default accent.
+    void composesTheReadmeScene() {
+        Window w;
+        QVERIFY(w.open());
+        w.key(Qt::Key_Space);
+        const QStringList labels{"1 kb", "0", "5", "10", "15", "20", "25", "30"};
+        for (int i = 0; i < labels.size(); ++i)
+            w.backend->setLaneLabel(i, labels[i]);
+        w.backend->toggleLadder(0);
+        w.backend->useAsReference(5, 0);
+        w.backend->setCrop(20, 40, 680, 430);
+        w.backend->addArrow(600, 150, 575, 172);
+        w.backend->addText(470, 104, "2.5 kb product");
+        w.backend->select(3, 0);
+        w.settle();
+        QVERIFY(w.backend->analysis().fit.ok);
+        QVERIFY(w.backend->results().at(10).toMap().value("normalized").toString().size() > 0);
+        w.shot("readme");
+        const QString directory = qEnvironmentVariable("GEL_UI_SHOTS");
+        if (!directory.isEmpty())
+            QVERIFY(w.backend->exportTo(QDir(directory).filePath("readme-figure.png"), "png", 200, 85));
+    }
+
     void turnsAndClearsLanesWithUndo() {
         Window w;
         QVERIFY(w.open());

@@ -332,6 +332,8 @@ bool exportTo(const QString &path, const QString &format, const GelImage &image,
 
     if (format == "png") {
         QImage page(pagePixels, QImage::Format_RGB32);
+        // The page is rounded up to whole pixels; the last row must be white too.
+        page.fill(Qt::white);
         page.setDotsPerMeterX(int(std::lround(options.dpi / .0254)));
         page.setDotsPerMeterY(int(std::lround(options.dpi / .0254)));
         {

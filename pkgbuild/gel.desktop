@@ -1,0 +1,21 @@
+[Desktop Entry]
+Type=Application
+Name=Gel
+Name[da]=Gel
+Name[de]=Gel
+Name[es]=Gel
+GenericName=Gel and blot quantification
+GenericName[da]=Kvantificering af geler og blots
+GenericName[de]=Gel- und Blot-Quantifizierung
+GenericName[es]=Cuantificación de geles y blots
+Comment=Annotate and quantify an agarose gel or Western blot, and export a publication figure
+Comment[da]=Annotér og kvantificér en agarosegel eller et Western blot, og eksportér en figur til publikation
+Comment[de]=Agarosegele und Western Blots beschriften, quantifizieren und als Abbildung exportieren
+Comment[es]=Anota y cuantifica un gel de agarosa o un Western blot, y exporta una figura para publicar
+Exec=gel open %f
+Icon=gel
+Terminal=false
+Categories=Science;Biology;
+Keywords=gel;agarose;western blot;densitometry;band;ladder;quantification;electrophoresis;
+MimeType=application/x-gel;
+StartupWMClass=gel
