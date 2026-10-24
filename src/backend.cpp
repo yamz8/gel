@@ -645,9 +645,12 @@ QStringList Backend::ladderPresets() const {
 }
 
 QString Backend::ladderSizes() const {
+    // Without group separators, so the list reads and edits cleanly.
+    QLocale locale;
+    locale.setNumberOptions(QLocale::OmitGroupSeparator);
     QStringList parts;
     for (double size : m_session.ladder.sizes)
-        parts << QLocale().toString(size, 'g', 6);
+        parts << locale.toString(size, 'g', 6);
     return parts.join("; ");
 }
 
