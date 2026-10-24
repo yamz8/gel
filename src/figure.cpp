@@ -62,7 +62,7 @@ Layout layout(const Session &session, const Frame &frame, const Analysis::Result
             l.sizeMarks << mark;
     double left = Margin;
     for (const auto &mark : l.sizeMarks)
-        left = std::max(left, Margin + sizeMetrics.horizontalAdvance(mark.text) + Tick + 2);
+        left = std::max(left, Margin + sizeMetrics.horizontalAdvance(mark.text) + 2 * Tick + 3);
 
     const double width = options.widthMm / 25.4 * 72;
     const double gelWidth = std::max(10.0, width - left - Margin);
@@ -139,12 +139,44 @@ void paint(QPainter &p, const Layout &l, const QImage &gel, const QColor &ink, c
     p.setFont(sizeFont);
     const QFontMetricsF sizeMetrics(sizeFont, p.device());
     p.setPen(QPen(Qt::black, .5));
-    for (const auto &mark : l.sizeMarks) {
-        const double y = toPage({0, mark.y}).y();
-        p.drawLine(QPointF(l.gel.left() - Tick, y), QPointF(l.gel.left(), y));
+    // Ladder bands crowd at the top of a gel, so labels that would overlap
+    // are spread apart and joined to their band by a short leader.
+    const double lineHeight = sizeMetrics.ascent() + sizeMetrics.descent() * .5;
+    QList<double> ys;
+    for (const auto &mark : l.sizeMarks)
+        ys << toPage({0, mark.y}).y();
+    // Overlapping labels merge into a stack centered on their bands, until
+    // no two stacks overlap.
+    struct Stack { int first, count; double sum; double center() const { return sum / count; } };
+    QList<Stack> stacks;
+    for (int i = 0; i < ys.size(); ++i)
+        stacks << Stack{i, 1, ys[i]};
+    for (bool merged = true; merged;) {
+        merged = false;
+        for (int i = 0; i + 1 < stacks.size(); ++i) {
+            const Stack &a = stacks[i], &b = stacks[i + 1];
+            if (a.center() + a.count * lineHeight / 2 > b.center() - b.count * lineHeight / 2) {
+                stacks[i] = Stack{a.first, a.count + b.count, a.sum + b.sum};
+                stacks.removeAt(i + 1);
+                merged = true;
+                break;
+            }
+        }
+    }
+    QList<double> placed(ys.size());
+    for (const auto &stack : stacks)
+        for (int k = 0; k < stack.count; ++k)
+            placed[stack.first + k] = stack.center() + (k - (stack.count - 1) / 2.0) * lineHeight;
+    const double elbow = l.gel.left() - Tick;
+    for (int i = 0; i < l.sizeMarks.size(); ++i) {
+        const auto &mark = l.sizeMarks[i];
+        const bool moved = std::abs(placed[i] - ys[i]) > .2;
+        const double textRight = elbow - (moved ? Tick + 1.5 : 1.5);
+        p.drawLine(QPointF(elbow, ys[i]), QPointF(l.gel.left(), ys[i]));
+        if (moved)
+            p.drawLine(QPointF(elbow - Tick, placed[i]), QPointF(elbow, ys[i]));
         const double w = sizeMetrics.horizontalAdvance(mark.text);
-        p.drawText(QPointF(l.gel.left() - Tick - 1.5 - w, y + (sizeMetrics.ascent() - sizeMetrics.descent()) / 2),
-                   mark.text);
+        p.drawText(QPointF(textRight - w, placed[i] + (sizeMetrics.ascent() - sizeMetrics.descent()) / 2), mark.text);
     }
 
     // Annotations stay inside the gel, so a crop clips them like the image.
@@ -187,6 +219,11 @@ bool commit(QSaveFile &file, const QByteArray &bytes, QString *error) {
 QImage displayImage(const Frame &frame, const ViewSettings &view, DisplayLevels levels) {
     return renderDisplay(frame.render(), frame.width(), frame.height(), levels, view.invert, view.brightness,
                          view.contrast);
+}
+
+double pointsPerPixel(const Session &session, const Frame &frame, const Analysis::Results &results,
+                      const Options &options) {
+    return layout(session, frame, results, options).k;
 }
 
 QRectF effectiveCrop(const Session &session, const Frame &frame) {

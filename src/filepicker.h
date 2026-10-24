@@ -1,9 +1,9 @@
 #pragma once
 
-#include <QList>
 #include <QObject>
 #include <QUrl>
 
+// Open and save dialogs, behind an interface so tests can answer them.
 class FilePicker : public QObject {
     Q_OBJECT
 
@@ -11,14 +11,12 @@ public:
     explicit FilePicker(QObject *parent = nullptr) : QObject(parent) {}
     virtual ~FilePicker() = default;
 
-    virtual void openVideo() = 0;
-    // scaleHeights are the downscale choices to offer besides "Original"
-    // (e.g. {1080, 720}), matched by min(width, height) of the source.
-    virtual void exportVideo(const QUrl &suggestedUrl, const QList<int> &scaleHeights) = 0;
+    virtual void openImage() = 0;
+    // format is png, svg, pdf, or csv.
+    virtual void exportFile(const QUrl &suggestedUrl, const QString &format) = 0;
 
 signals:
     void openSelected(const QUrl &url);
-    // scaleHeight is 0 for "Original", otherwise the chosen short-side size.
-    void exportSelected(const QUrl &url, int scaleHeight);
+    void exportSelected(const QUrl &url);
     void failed(const QString &message);
 };

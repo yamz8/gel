@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+
+# The analysis and files, then the real window driven offscreen.
+for suite in gel_tests ui_tests; do
+    mkdir -p "$ROOT/build/tests/$suite"
+    cd "$ROOT/build/tests/$suite"
+    qmake6 "$ROOT/tests/$suite.pro" >/dev/null
+    make -j"$(nproc)" >/dev/null
+    QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic NO_AT_BRIDGE=1 ./"$suite"
+done
+
+# Every command, against the real binary.
+"$ROOT/bin/build" >/dev/null
+"$ROOT/tests/cli.sh" "$ROOT/build/gel"

@@ -1,4 +1,7 @@
+// Adapted from Omacut's portal file picker (MIT, David Heinemeier Hansson).
 #include "portalfilepicker.h"
+
+#include <QCoreApplication>
 
 #include <QDBusConnection>
 #include <QDBusArgument>
@@ -26,23 +29,6 @@ struct PortalFileFilter {
 };
 
 using PortalFileFilters = QList<PortalFileFilter>;
-
-// The portal's combo-box "choices" option: (id, label, [(option-id, option-label)], initial).
-struct PortalChoiceOption {
-    QString id;
-    QString label;
-};
-
-using PortalChoiceOptions = QList<PortalChoiceOption>;
-
-struct PortalChoice {
-    QString id;
-    QString label;
-    PortalChoiceOptions options;
-    QString initial;
-};
-
-using PortalChoices = QList<PortalChoice>;
 
 QDBusArgument &operator<<(QDBusArgument &argument, const PortalFilterRule &rule) {
     argument.beginStructure();
@@ -72,83 +58,49 @@ const QDBusArgument &operator>>(const QDBusArgument &argument, PortalFileFilter 
     return argument;
 }
 
-QDBusArgument &operator<<(QDBusArgument &argument, const PortalChoiceOption &option) {
-    argument.beginStructure();
-    argument << option.id << option.label;
-    argument.endStructure();
-    return argument;
-}
-
-const QDBusArgument &operator>>(const QDBusArgument &argument, PortalChoiceOption &option) {
-    argument.beginStructure();
-    argument >> option.id >> option.label;
-    argument.endStructure();
-    return argument;
-}
-
-QDBusArgument &operator<<(QDBusArgument &argument, const PortalChoice &choice) {
-    argument.beginStructure();
-    argument << choice.id << choice.label << choice.options << choice.initial;
-    argument.endStructure();
-    return argument;
-}
-
-const QDBusArgument &operator>>(const QDBusArgument &argument, PortalChoice &choice) {
-    argument.beginStructure();
-    argument >> choice.id >> choice.label >> choice.options >> choice.initial;
-    argument.endStructure();
-    return argument;
-}
-
 void registerPortalFilterTypes() {
     static const bool registered = [] {
         qDBusRegisterMetaType<PortalFilterRule>();
         qDBusRegisterMetaType<PortalFilterRules>();
         qDBusRegisterMetaType<PortalFileFilter>();
         qDBusRegisterMetaType<PortalFileFilters>();
-        qDBusRegisterMetaType<PortalChoiceOption>();
-        qDBusRegisterMetaType<PortalChoiceOptions>();
-        qDBusRegisterMetaType<PortalChoice>();
-        qDBusRegisterMetaType<PortalChoices>();
         return true;
     }();
     Q_UNUSED(registered);
 }
 
-PortalFileFilter videoFilter() {
+QString tr(const char *text) { return QCoreApplication::translate("FilePicker", text); }
+
+PortalFileFilter imageFilter() {
     return {
-        QStringLiteral("Video files"),
+        tr("Gel images and sessions"),
         {
-            {1, QStringLiteral("video/*")},
-            {0, QStringLiteral("*.avi")},
-            {0, QStringLiteral("*.m4v")},
-            {0, QStringLiteral("*.mkv")},
-            {0, QStringLiteral("*.mov")},
-            {0, QStringLiteral("*.mp4")},
-            {0, QStringLiteral("*.mpeg")},
-            {0, QStringLiteral("*.mpg")},
-            {0, QStringLiteral("*.webm")},
+            {0, QStringLiteral("*.png")},
+            {0, QStringLiteral("*.PNG")},
+            {0, QStringLiteral("*.jpg")},
+            {0, QStringLiteral("*.JPG")},
+            {0, QStringLiteral("*.jpeg")},
+            {0, QStringLiteral("*.tif")},
+            {0, QStringLiteral("*.TIF")},
+            {0, QStringLiteral("*.tiff")},
+            {0, QStringLiteral("*.TIFF")},
+            {0, QStringLiteral("*.gel")},
         },
     };
 }
 
-PortalFileFilters videoFilters() {
-    return {
-        videoFilter(),
-        {QStringLiteral("All files"), {{0, QStringLiteral("*")}}},
-    };
-}
-
-PortalFileFilter mp4Filter() {
-    return {QStringLiteral("MP4 video"), {{0, QStringLiteral("*.mp4")}}};
-}
-
-PortalFileFilters mp4Filters() {
-    return {mp4Filter()};
+PortalFileFilter exportFilter(const QString &format) {
+    if (format == "svg")
+        return {tr("SVG figure"), {{0, QStringLiteral("*.svg")}}};
+    if (format == "pdf")
+        return {tr("PDF figure"), {{0, QStringLiteral("*.pdf")}}};
+    if (format == "csv")
+        return {tr("CSV results"), {{0, QStringLiteral("*.csv")}}};
+    return {tr("PNG figure"), {{0, QStringLiteral("*.png")}}};
 }
 
 QString portalToken() {
-    return QStringLiteral("omacut_%1").arg(QRandomGenerator::global()->generate());
+    return QStringLiteral("gel_%1").arg(QRandomGenerator::global()->generate());
 }
 
 QByteArray portalPathBytes(const QString &path) {
@@ -158,8 +110,8 @@ QByteArray portalPathBytes(const QString &path) {
 }
 
 QString openFolder() {
-    const QString videos = QStandardPaths::writableLocation(QStandardPaths::MoviesLocation);
-    return QDir(videos).exists() ? videos : QDir::homePath();
+    const QString pictures = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+    return QDir(pictures).exists() ? pictures : QDir::homePath();
 }
 }
 
@@ -167,44 +119,28 @@ PortalFilePicker::PortalFilePicker(QObject *parent) : FilePicker(parent) {
     registerPortalFilterTypes();
 }
 
-void PortalFilePicker::openVideo() {
+void PortalFilePicker::openImage() {
     QVariantMap options;
-    options.insert(QStringLiteral("accept_label"), QStringLiteral("Open"));
+    options.insert(QStringLiteral("accept_label"), tr("Open"));
     options.insert(QStringLiteral("modal"), true);
     options.insert(QStringLiteral("multiple"), false);
     options.insert(QStringLiteral("current_folder"), portalPathBytes(openFolder()));
-    options.insert(QStringLiteral("filters"), QVariant::fromValue(videoFilters()));
-    options.insert(QStringLiteral("current_filter"), QVariant::fromValue(videoFilter()));
-
-    requestFile(QStringLiteral("OpenFile"), QStringLiteral("Open Video File"), options, Action::Open);
+    options.insert(QStringLiteral("filters"), QVariant::fromValue(PortalFileFilters{
+        imageFilter(), {tr("All files"), {{0, QStringLiteral("*")}}}}));
+    options.insert(QStringLiteral("current_filter"), QVariant::fromValue(imageFilter()));
+    requestFile(QStringLiteral("OpenFile"), tr("Open Gel Image"), options, Action::Open);
 }
 
-void PortalFilePicker::exportVideo(const QUrl &suggestedUrl, const QList<int> &scaleHeights) {
+void PortalFilePicker::exportFile(const QUrl &suggestedUrl, const QString &format) {
     const QFileInfo target(suggestedUrl.toLocalFile());
-
     QVariantMap options;
-    options.insert(QStringLiteral("accept_label"), QStringLiteral("Export"));
+    options.insert(QStringLiteral("accept_label"), tr("Export"));
     options.insert(QStringLiteral("modal"), true);
     options.insert(QStringLiteral("current_folder"), portalPathBytes(target.absolutePath()));
     options.insert(QStringLiteral("current_name"), target.fileName());
-    options.insert(QStringLiteral("filters"), QVariant::fromValue(mp4Filters()));
-    options.insert(QStringLiteral("current_filter"), QVariant::fromValue(mp4Filter()));
-
-    // A "Quality" combo in the save dialog, only when there's a real downscale
-    // to offer — sources at or below 720p just export as they are.
-    if (!scaleHeights.isEmpty()) {
-        PortalChoiceOptions qualities = {{QStringLiteral("original"), QStringLiteral("Original")}};
-        for (const int height : scaleHeights)
-            qualities.append({QString::number(height), QStringLiteral("%1p").arg(height)});
-        options.insert(QStringLiteral("choices"),
-                       QVariant::fromValue(PortalChoices{{QStringLiteral("quality"),
-                                                          QStringLiteral("Quality"),
-                                                          qualities,
-                                                          QStringLiteral("original")}}));
-    }
-
-    requestFile(QStringLiteral("SaveFile"), QStringLiteral("Save Video File"),
-                options, Action::Export);
+    options.insert(QStringLiteral("filters"), QVariant::fromValue(PortalFileFilters{exportFilter(format)}));
+    options.insert(QStringLiteral("current_filter"), QVariant::fromValue(exportFilter(format)));
+    requestFile(QStringLiteral("SaveFile"), tr("Export"), options, Action::Export);
 }
 
 bool PortalFilePicker::connectToRequestPath(const QString &path) {
@@ -240,7 +176,7 @@ void PortalFilePicker::requestFile(const QString &method, const QString &title,
                           QStringLiteral("org.freedesktop.portal.FileChooser"),
                           bus);
     if (!portal.isValid()) {
-        emit failed(QStringLiteral("The XDG desktop portal file chooser is not available."));
+        emit failed(tr("The XDG desktop portal file chooser is not available."));
         return;
     }
 
@@ -257,7 +193,7 @@ void PortalFilePicker::requestFile(const QString &method, const QString &title,
     m_pendingAction = action;
     if (!connectToRequestPath(predictedPath)) {
         clearPending();
-        emit failed(QStringLiteral("Could not listen for the portal file picker response."));
+        emit failed(tr("Could not listen for the portal file picker response."));
         return;
     }
 
@@ -279,7 +215,7 @@ void PortalFilePicker::requestFile(const QString &method, const QString &title,
 
         if (reply.isError()) {
             clearPending();
-            emit failed(QStringLiteral("The portal file picker failed: %1")
+            emit failed(tr("The portal file picker failed: %1")
                             .arg(reply.error().message()));
             return;
         }
@@ -294,7 +230,7 @@ void PortalFilePicker::requestFile(const QString &method, const QString &title,
                 this, SLOT(handleResponse(uint,QVariantMap)));
             if (!connectToRequestPath(actualPath)) {
                 clearPending();
-                emit failed(QStringLiteral("Could not listen for the portal file picker response."));
+                emit failed(tr("Could not listen for the portal file picker response."));
             }
         }
     });
@@ -319,25 +255,7 @@ void PortalFilePicker::handleResponse(uint response, const QVariantMap &results)
     if (action != Action::Export)
         return;
 
-    // The chosen quality rides along in the response: [("quality", "1080")],
-    // with "original" (or no choices at all) meaning no downscale.
-    int scaleHeight = 0;
-    const QVariant choicesVar = results.value(QStringLiteral("choices"));
-    if (choicesVar.canConvert<QDBusArgument>()) {
-        const QDBusArgument arg = choicesVar.value<QDBusArgument>();
-        arg.beginArray();
-        while (!arg.atEnd()) {
-            QString id;
-            QString value;
-            arg.beginStructure();
-            arg >> id >> value;
-            arg.endStructure();
-            if (id == QStringLiteral("quality"))
-                scaleHeight = value.toInt();  // "original" parses to 0
-        }
-        arg.endArray();
-    }
-    emit exportSelected(url, scaleHeight);
+    emit exportSelected(url);
 }
 
 void PortalFilePicker::clearPending() {

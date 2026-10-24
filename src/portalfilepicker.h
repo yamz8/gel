@@ -1,5 +1,7 @@
 #pragma once
 
+// Adapted from Omacut's portal file picker (MIT, David Heinemeier Hansson).
+
 #include <QVariantMap>
 
 #include "filepicker.h"
@@ -12,8 +14,8 @@ class PortalFilePicker : public FilePicker {
 public:
     explicit PortalFilePicker(QObject *parent = nullptr);
 
-    void openVideo() override;
-    void exportVideo(const QUrl &suggestedUrl, const QList<int> &scaleHeights) override;
+    void openImage() override;
+    void exportFile(const QUrl &suggestedUrl, const QString &format) override;
 
 private slots:
     void handleResponse(uint response, const QVariantMap &results);

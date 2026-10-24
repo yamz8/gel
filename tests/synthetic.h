@@ -85,6 +85,33 @@ struct Synthetic {
         return image;
     }
 
+    // A believable stained agarose gel for screenshots and the window tests:
+    // a 1 kb ladder, then a PCR series whose product grows lane by lane, a
+    // fainter second product, and a primer-dimer smear at the bottom.
+    static Synthetic demo() {
+        Synthetic gel;
+        gel.width = 760;
+        gel.height = 470;
+        gel.background = 2600;
+        gel.slopeY = 1.5;
+        gel.noise = 140;
+        gel.seed = 11;
+        SyntheticLane ladder{70, 41, {}};
+        for (double size : {10000.0, 8000.0, 6000.0, 5000.0, 4000.0, 3000.0, 2000.0, 1500.0, 1000.0, 500.0})
+            ladder.bands << SyntheticBand{migration(size), size == 3000 ? 16000.0 : 9000.0, 3.2};
+        gel.lanes << ladder;
+        const double amounts[] = {0.15, 0.3, 0.55, 0.8, 1.0, 1.0, 0.45};
+        for (int i = 0; i < 7; ++i) {
+            SyntheticLane lane{150.0 + 82 * i, 41, {}};
+            lane.bands << SyntheticBand{migration(2500), 20000 * amounts[i], 4};
+            if (i >= 2)
+                lane.bands << SyntheticBand{migration(1200), 5000 * amounts[i], 3.5};
+            lane.bands << SyntheticBand{migration(180), 3500, 9};
+            gel.lanes << lane;
+        }
+        return gel;
+    }
+
     // Where a ladder band of this size runs: log-linear with a gentle bend,
     // like a real agarose gel.
     static double migration(double size) {

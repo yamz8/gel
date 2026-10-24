@@ -1,0 +1,20 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="Main.qml">Main.qml</file>
+        <file alias="Toolbar.qml">Toolbar.qml</file>
+        <file alias="StatusBar.qml">StatusBar.qml</file>
+        <file alias="GelView.qml">GelView.qml</file>
+        <file alias="LaneBox.qml">LaneBox.qml</file>
+        <file alias="AnnotationMark.qml">AnnotationMark.qml</file>
+        <file alias="SidePanel.qml">SidePanel.qml</file>
+        <file alias="ProfilePanel.qml">ProfilePanel.qml</file>
+        <file alias="HelpOverlay.qml">HelpOverlay.qml</file>
+        <file alias="ExportDialog.qml">ExportDialog.qml</file>
+        <file alias="ConfirmDialog.qml">ConfirmDialog.qml</file>
+        <file alias="i18n/en.json">i18n/en.json</file>
+        <file alias="i18n/da.json">i18n/da.json</file>
+        <file alias="i18n/de.json">i18n/de.json</file>
+        <file alias="i18n/es.json">i18n/es.json</file>
+        <file alias="skill/SKILL.md">skill/SKILL.md</file>
+    </qresource>
+</RCC>

@@ -24,6 +24,10 @@ QImage displayImage(const Frame &frame, const ViewSettings &view, DisplayLevels 
 // Text annotations and arrows read on whichever the gel's background is.
 QColor annotationColor(const QImage &display, const QRectF &crop);
 QRectF effectiveCrop(const Session &session, const Frame &frame);
+// How large a frame pixel comes out in the figure, so the window can show
+// annotations at the size they will print.
+double pointsPerPixel(const Session &session, const Frame &frame, const Analysis::Results &results,
+                      const Options &options);
 
 QString metadata(const Session &session, const GelImage &image, const Analysis::Results &results);
 QByteArray csv(const Session &session, const Analysis::Results &results);
