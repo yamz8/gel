@@ -4,6 +4,7 @@ TARGET = gel_tests
 TEMPLATE = app
 
 INCLUDEPATH += ../src
+DEFINES += SOURCE_DIR=\\\"$$PWD/../src\\\"
 
 HEADERS += \
     synthetic.h \

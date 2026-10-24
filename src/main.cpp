@@ -41,13 +41,14 @@ int main(int argc, char *argv[]) {
     app.setDesktopFileName("gel");
     app.setWindowIcon(QIcon::fromTheme("gel"));
 
+    // Commands speak English, so scripts and agents can read them anywhere.
+    if (command)
+        return runCli(app.arguments());
+
     // Installed before anything is translated, and every qsTr() binding is
     // re-evaluated when the Omarchy language changes.
     Translator translator;
     app.installTranslator(&translator);
-
-    if (command)
-        return runCli(app.arguments());
 
     QCommandLineParser args;
     args.setApplicationDescription("Annotate and quantify a gel or blot, and export a figure.\n\n" + cliSummary());

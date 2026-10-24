@@ -530,20 +530,41 @@ private slots:
         QCOMPARE(Translator::pluralCategory("ar", 11), QString("many"));
     }
 
-    void catalogsCoverEveryEnglishString() {
-        // Every shipped catalog is valid JSON and translates the same keys.
-        QFile english(":/i18n/en.json");
-        QVERIFY(english.open(QIODevice::ReadOnly));
-        const QJsonObject en = QJsonDocument::fromJson(english.readAll()).object();
+    void catalogsCoverEveryVisibleString() {
+        // Every qsTr() in the QML and tr() in the C++ the window shows (the
+        // command line stays English) has a translation in every catalog.
+        QStringList keys;
+        const QDir sources(SOURCE_DIR);
+        for (const QString &name : sources.entryList({"*.qml", "*.cpp"})) {
+            if (name == "cli.cpp")
+                continue;
+            QFile file(sources.filePath(name));
+            QVERIFY(file.open(QIODevice::ReadOnly));
+            const QString text = QString::fromUtf8(file.readAll());
+            // A call with a literal: tr("…") in C++, qsTr("…") in QML.
+            const QString string = QStringLiteral("\\(\"((?:[^\"\\\\]|\\\\.)*)\"");
+            const QRegularExpression call((name.endsWith(".qml") ? QStringLiteral("qsTr") : QStringLiteral("\\btr")) + string);
+            for (auto it = call.globalMatch(text); it.hasNext();)
+                keys << it.next().captured(1);
+        }
+        keys.removeDuplicates();
+        QVERIFY(keys.size() > 100);
         for (const QString code : {"da", "de", "es"}) {
             QFile file(":/i18n/" + code + ".json");
             QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(code));
             QJsonParseError parse;
             const QJsonObject catalog = QJsonDocument::fromJson(file.readAll(), &parse).object();
             QVERIFY2(parse.error == QJsonParseError::NoError, qPrintable(code + ": " + parse.errorString()));
-            for (const QString &key : en.keys())
-                QVERIFY2(catalog.contains(key), qPrintable(code + " lacks " + key));
+            for (const QString &key : keys)
+                QVERIFY2(catalog.contains(key), qPrintable(code + " lacks \"" + key + "\""));
         }
+        // English carries the plural forms of counted strings.
+        QFile english(":/i18n/en.json");
+        QVERIFY(english.open(QIODevice::ReadOnly));
+        const QJsonObject en = QJsonDocument::fromJson(english.readAll()).object();
+        for (const QString &key : keys)
+            if (key.contains("%n"))
+                QVERIFY2(en.value(key).isObject(), qPrintable("en lacks plurals for " + key));
     }
 };
 
